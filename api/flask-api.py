@@ -72,7 +72,7 @@ def predict():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False) # debug=True reruns everything like every minute. This caused multiple calls of qdrant client, which led to an error
 
 
 # To run app you have to do this in the terminal (powershell)

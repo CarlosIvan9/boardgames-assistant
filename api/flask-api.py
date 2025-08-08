@@ -92,3 +92,9 @@ if __name__ == '__main__':
 
 #curl -X POST https://sentiment-usecase.onrender.com/predict -H "Content-Type: application/json" -d '{"review": ["Me again", "Love", "I hated it"]}'
 
+
+
+# Notes for deploying on render:
+# * build commands: pip install -r requirements.txt
+# * start command: gunicorn flask-app:app
+#

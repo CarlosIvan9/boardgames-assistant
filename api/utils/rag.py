@@ -34,6 +34,9 @@ from langgraph.prebuilt import  tools_condition
 from langgraph.checkpoint.memory import MemorySaver
 
 
+print('We started running rag script')
+
+
 ######################
 
 
@@ -181,4 +184,4 @@ memory = MemorySaver()
 graph = graph_builder.compile(checkpointer=memory)
 
 
-
+print('We finished running rag script')

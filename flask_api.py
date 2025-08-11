@@ -57,9 +57,11 @@ def predict():
     # Get question
     data = request.json
     input_message = data.get("question", "")
-
+    
+    print('Comment before invoking the graph')
     # Get output from rag
     answer = graph.invoke({"messages": [{"role": "user", "content": input_message}]}, config=config)
+    print('Comment after invoking graph')
     
     # Format output to be able to be returned to user
     response = jsonify({"question": input_message, "answer": answer['messages'][-1].content}) # for scripts
@@ -88,6 +90,8 @@ if __name__ == '__main__':
 
 # To test a post (in terminal. Git bash works well, powershell does not):
 #curl -X POST http://127.0.0.1:5000/predict -H "Content-Type: application/json" -d '{"question": "How do you win at Memoir?"}'
+#curl -X POST https://boardgames-assistant.onrender.com/predict -H "Content-Type: application/json" -d '{"question": "How do you win at Memoir?"}'
+
 
 
 #curl -X POST https://sentiment-usecase.onrender.com/predict -H "Content-Type: application/json" -d '{"review": ["Me again", "Love", "I hated it"]}'

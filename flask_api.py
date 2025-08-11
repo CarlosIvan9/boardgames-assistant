@@ -54,6 +54,14 @@ app = Flask(__name__)
 
 @app.route('/predict', methods=['POST'])  # Only POST
 def predict():
+
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
+
+    logger.debug("This will show in Render logs")
+
+
     # Get question
     data = request.json
     input_message = data.get("question", "")

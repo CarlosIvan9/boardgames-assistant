@@ -1,0 +1,5 @@
+
+# Stuff not to upload to render
+data/raw-rulebooks/
+notebooks/
+dashboard/

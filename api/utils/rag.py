@@ -33,6 +33,12 @@ from langgraph.prebuilt import  tools_condition
 #For adding memory to the graph
 from langgraph.checkpoint.memory import MemorySaver
 
+#For logging
+import logging
+
+logger = logging.getLogger(__name__)
+
+    
 
 print('We started running rag script')
 
@@ -90,12 +96,13 @@ vector_store = QdrantVectorStore(
 @tool(response_format="content_and_artifact") # This will make it possible for a chat model to call this function
 def retrieve(query: str): # This receives a string as input and not a state bc it is not a node. This tool will be added into a node, that needs as input a State
     """Retrieve information related to a query."""
+    logger.debug("Start of retrieval tool")
     retrieved_docs = vector_store.similarity_search(query, k=4)
     serialized = "\n\n".join(  #The concatenation of docs as strings was done in the generate function before, and it did not include metadata
         (f"Content: {doc.page_content}") 
         for doc in retrieved_docs 
     )
-    print('Retrieval of data successful')
+    logger.debug("End of retrieval tool")
     return serialized, retrieved_docs  # if you use @tool(response_format="content_and_artifact"), you must return exactly a tuple of two elements
 #First element → This is what will be used as the main textual output (like a summary or answer).
 #Second element → This is any additional data (e.g. a document, list of sources, JSON, etc.) that might be useful for tracking, inspection, or chaining.
@@ -106,13 +113,15 @@ def retrieve(query: str): # This receives a string as input and not a state bc i
 # Node 1: Generate an AIMessage that may include a tool-call to be sent.
 def query_or_respond(state: MessagesState):
     """Generate tool call for retrieval or respond."""
+    logger.debug("Start of query_or_respond node")
     llm_with_tools = model.bind_tools([retrieve]) # Tells the chat model it can use the retrieve tool
     response = llm_with_tools.invoke(state["messages"]) 
     # "response" is an AIMessage object with the content of the message and some metadata
     # This metadata also says if you must call a Tool or not, and which tool to call
     # MessagesState appends messages to state instead of overwriting
     output = {"messages": [response]}
-    print(output)
+    logger.debug("End of query_or_respond node")
+    logger.debug(f"Output of query_or_respond node: {output}")
     return output
 
 # Node 2: Execute the retrieval.
@@ -124,6 +133,7 @@ tools = ToolNode([retrieve])
 def generate(state: MessagesState): #This state contains the original query as a human message + the context from the retriever as an ai message
     """Generate answer."""
     # Get generated ToolMessages
+    logger.debug("Start of node generate")
     recent_tool_messages = []
     for message in reversed(state["messages"]):
         #print(message.content) #Useful to see what is appended in the message
@@ -151,10 +161,11 @@ def generate(state: MessagesState): #This state contains the original query as a
         or (message.type == "ai" and not message.tool_calls) #excludes ai messages from the retriever (outputs of the retriever are already added in system_message_content)
     ]
     prompt = [SystemMessage(system_message_content)] + conversation_messages
-    print(f'Prompt for generate function: {prompt}' )
+    logger.debug(f'Prompt for generate function: {prompt}' )
 
     # Run
     response = model.invoke(prompt)
+    logger.debug("End of generate node")
     return {"messages": [response]} # MessagesState appends messages to state instead of overwriting
 
 

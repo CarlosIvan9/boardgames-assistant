@@ -35,6 +35,8 @@ import json # To return api answer as json in .ipynb scripts
 # Create id of thread (Memory of the chatbot will be reset every different day)
 from datetime import datetime
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 #####################
 ### Set thread id ###
@@ -55,25 +57,28 @@ app = Flask(__name__)
 @app.route('/predict', methods=['POST'])  # Only POST
 def predict():
 
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
+
     logger = logging.getLogger(__name__)
 
-    logger.debug("This will show in Render logs")
+    logger.debug("Start of predict function")
 
 
     # Get question
     data = request.json
     input_message = data.get("question", "")
+    logger.debug(f"User question: {input_message}")
+
     
-    print('Comment before invoking the graph')
+    logger.debug('Comment before invoking the graph')
     # Get output from rag
     answer = graph.invoke({"messages": [{"role": "user", "content": input_message}]}, config=config)
-    print('Comment after invoking graph')
+    logger.debug('Comment after invoking graph')
     
     # Format output to be able to be returned to user
     response = jsonify({"question": input_message, "answer": answer['messages'][-1].content}) # for scripts
     #response = json.dumps({"question": input_message, "answer": answer['messages'][-1].content}) #For notebooks
+
+    logger.debug(f'Answer to give: {response}')
 
     return response
 

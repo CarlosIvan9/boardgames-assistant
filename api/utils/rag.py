@@ -100,7 +100,8 @@ def retrieve(query: str): # This receives a string as input and not a state bc i
     nr_vector_store_documents=client.count(collection_name=vector_store.collection_name).count  # Works for Qdrant vector_store
     logger.debug(f'Size of vector store until now: {nr_vector_store_documents}')
     logger.debug(f"Starts vector similarity search")
-    retrieved_docs = vector_store.similarity_search(query, k=1, search_params={"ef": 4})
+    # This is were the app crashes due to lack of memory
+    retrieved_docs = vector_store.similarity_search(query, k=4) # Tried this to make it lighter but never worked(query, k=1, search_params={"ef": 4})
     logger.debug("Vector similarity done")
     serialized = "\n\n".join(  #The concatenation of docs as strings was done in the generate function before, and it did not include metadata
         (f"Content: {doc.page_content}") 

@@ -19,8 +19,8 @@ Usage locally:
 import sys
 # Useful to set working directory
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent / "utils"))  #For scripts
-#sys.path.append(str(Path().resolve() / "utils"))  #For notebooks
+sys.path.append(str(Path(__file__).resolve().parent / "api" / "utils"))  #For scripts
+#sys.path.append(str(Path().resolve() / "api" / "utils"))  #For notebooks
 
 # Load rag graph
 from rag import graph

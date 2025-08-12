@@ -25,6 +25,9 @@ sys.path.append(str(Path(__file__).resolve().parent / "api" / "utils"))  #For sc
 # Load rag graph
 from rag import graph
 
+# To feed the graph
+from langchain_core.messages import HumanMessage
+
 # To work witth api
 from flask import Flask, request
 
@@ -71,7 +74,10 @@ def predict():
     
     logger.debug('Comment before invoking the graph')
     # Get output from rag
-    answer = graph.invoke({"messages": [{"role": "user", "content": input_message}]}, config=config)
+
+    an_input_state={'messages':[HumanMessage(content=input_message)]}
+
+    answer = graph.invoke( an_input_state , config=config)
     logger.debug('Comment after invoking graph')
     
     # Format output to be able to be returned to user

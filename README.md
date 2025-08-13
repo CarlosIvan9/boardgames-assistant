@@ -4,13 +4,13 @@ The assistant is a RAG. We split the logic in 2 parts. The first part is in char
 The second part is the chatbot: it receives the question of the user, and retrieves an answer using as context the chunks from the vector store that are more similar to the question.
 The first part is just a jupyter notebook called 'upload-files-to-qdrant-vector-store.ipynb'. The second part is a flask api which uses the script 'flask_api.py' and the rag module in the 'api/utils' folder.
 
-Both branches work very well locally using flask.
+Both branches work very well locally using flask, but fail to work on Render due to lack of memory in the free compute provided by them.
 
 # Project Status
-The project currently has two branches: first_rag and light_rag
+The project currently has three branches: first_rag, light_rag, and light_rag_st_deployment.
 
-Both projects share the same logic in the first part of the project (creating chunks and embeddings in vector store), deviating only in the model used for the embeddings.
-However, there are many differences between the branches in the second part of the project (creating the chatbot).
+The first two branches shared the same objective. Both of them share the same logic in the first part of the project (creating chunks and embeddings in vector store), deviating only in the model used for the embeddings.
+However, there are many differences between these branches in the second part of the project (creating the chatbot).
 
 ## Branch first_rag
 First rag is the first model we did. It is very similar to the one shown in the tutorial for rag part 2 in Langchain, with the differences of using a Qdrant vector datastore for storing the embeddings. This rag worked well locally. We tried to deploy the project on Render.com; however, we hit memory issues.
@@ -30,3 +30,8 @@ However, the function we used to retrieve the data, which was a Langchain tool, 
 
 ### Other changes
 Besides that, I adapted the graph to only run the retriever and the node to detect useful documents if the question is related to a boardgame.
+
+## Branch light_rag_st_deployment
+Given the lack of success in deploying any of the previous 2 branches in Render, we focused on deploying them completely in Streamlit. We decided to only do this for the light_rag branch since it is the one I felt proudest the most. However, in order to deploy the app via the free Streamlit Community Cloud, the whole branch needs to be copied, and there does not exist a file to exclude files like .gitignore. This is a problem since the repo contains the pdf's of the rules  of the boardgames, which take up most of the memory of the repo. 
+
+Furthermore, streamlit works only with 'requirements.txt' files for python packages (no other naming conventions allowed), and some extra changes need to be made since environment variables will be used instead of a .env file loaded via dotenv(). Because all of this, I decided the simplest solution was to create an additional branch which will only contain files needed for streamlit deployment.

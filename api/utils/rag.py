@@ -37,7 +37,8 @@ possible_games = ['axis-allies-rules-1942-2nd-edition',
  'Voyages Of Marco Polo - English Rules V3',
  'Voyages_Of_Marco_Polo_-_FAQ_and_Errata_V2']
 
-print('We started running rag script')
+
+
 
 
 
@@ -136,6 +137,7 @@ vector_store = QdrantVectorStore(
 # Approach via Chains
 #Our graph will consist of four nodes:
 
+    #0- A node that detects if the question is about a board game or not 
     #1- A node that extracts the possible document names that could help with the answer
     #2- A node for the retriever tool that executes the retrieval step
     #3- A node that generates the final response using the retrieved context.
@@ -144,12 +146,50 @@ class StateWithDocsList(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages] #add_messages appends new messages in the state automatically
     list_useful_docs: List[str]
     concatenated_retrieved_context: str
+    should_use_retriever: str #Tried to set it to boolean but gave me errors
+
+
+# Node 0: Determine if query is a question about a boardgame or not. If not, we dont detect documents nor call
+# the retriever.
+def boargame_question_detector(state: StateWithDocsList):
+    """Determines if query is a question about a boardgame or not."""
+    #print('running boargame_question_detector')
+
+    prompt = (
+        "You are an assistant that tries to detect if a sentence could be a boardgame related question or not. "
+        "First detect if the sentence could be related to a boardgame or not. Examples of this are questions or statements about a boardgame. "
+        "Be careful, it could be that the boardgame name is not mentioned but still the context is related to a boardgame."
+        "Then ONLY return a 'True' if the text could be related to a boardgame or 'False'. Nothing else."
+        "If you are not sure about it, return 'True'."
+
+        "The sentence of the user is:"
+        f"{state['messages'][-1].content}"
+    )
+
+    response = model.invoke(prompt)
+    str_should_use_retriever = response.content #Responses are of type AIMessage
+    
+    # We make sure that if a new question is asking something of the boardgame of the previous question, but is not
+    # mentioning the boardgame name explicitly, we keep the same useful documents (otherwise it would be a 'None').
+    if str_should_use_retriever == 'True': 
+        state['should_use_retriever']= 'True'
+
+    if str_should_use_retriever == 'False': 
+        state['should_use_retriever']= 'False'
+        state['concatenated_retrieved_context']= 'No context. Question is not about a boardgame.'
+
+    #print(f"state: {state}")
+
+    return state
+
+
+
 
 
 # Node 1: Extract possible document names.
 def get_useful_document_names(state: StateWithDocsList):
     """Finds subset of useful boardgame document names to be used in retrieval"""
-
+    #print('running get_useful_document_names')
     prompt = (
         "You are an assistant that tries to find which boardgame booklets are related to a particular sentence. "
         "First detect the name of the boardgame the user is asking about."
@@ -172,14 +212,26 @@ def get_useful_document_names(state: StateWithDocsList):
     list_useful_docs=str_list_useful_docs.split(',')
     list_useful_docs=[astring.strip() for astring in list_useful_docs]
     
-    state['list_useful_docs']= list_useful_docs
+    # We make sure that if a new question is asking something of the boardgame of the previous question, but is not
+    # mentioning the boardgame name explicitly, we keep the same useful documents (otherwise it would be a 'None').
+    if ('list_useful_docs' in state.keys() and 
+        state['list_useful_docs']!= ['None'] and 
+        list_useful_docs==['None']
+        ): 
+        state['list_useful_docs']= state['list_useful_docs'] 
+    else: 
+        state['list_useful_docs']= list_useful_docs
+    #print(f"state: {state}")
+
 
     return state
 
 
-# Node 2: Retrieve related content from docs.
+
+
 def retriever(state: StateWithDocsList): # This receives a string as input and not a state bc it is not a node. This tool will be added into a node, that needs as input a State
     """Retrieve information related to a query."""
+    #print('running retriever')
     nr_vector_store_documents=client.count(collection_name=vector_store.collection_name).count  # Works for Qdrant vector_store
     #print(nr_vector_store_documents)
     logger.debug(f'Size of vector store until now: {nr_vector_store_documents}')
@@ -210,6 +262,7 @@ def retriever(state: StateWithDocsList): # This receives a string as input and n
     )
     state['concatenated_retrieved_context'] = concat_context
     logger.debug("End of retrieval tool")
+    #print(f'state: {state}')
 
     return state
 
@@ -217,18 +270,16 @@ def retriever(state: StateWithDocsList): # This receives a string as input and n
 # Node 3: Generate a response using the retrieved content. This will only be run if we retrieved data from the vector_store
 def generate(state: StateWithDocsList): #This state contains the original query as a human message + the context from the retriever as an ai message
     """Generate answer."""
-    # Get generated ToolMessages
     logger.debug("Start of node generate")
+    #print('running generate')
 
-
-    #maybe try using tools and see if it works or not?
     system_message_content = (
         "You are an assistant for question-answering tasks. "
         "Use the following pieces of retrieved context to answer the question. "
         "If you don't know the answer, just say that you don't know, don't try to make up an answer."
         "Use between three to 5 sentences maximum and keep the answer concise."
         "\n\n"
-        f"{state['concatenated_retrieved_context']}"
+        f"{state.get('concatenated_retrieved_context')}"
     )
     conversation_messages = [
         message
@@ -236,7 +287,7 @@ def generate(state: StateWithDocsList): #This state contains the original query 
         if message.type in ("human", "system")
         or (message.type == "ai" and not message.tool_calls) #excludes ai messages from the retriever (I think not doing this will output 1 extra message per doc extracted)
     ]
-    prompt = [SystemMessage(system_message_content)] + conversation_messages #This is done to let know the chatbot of the question
+    prompt = [SystemMessage(system_message_content)] + conversation_messages #This is done to let know the chatbot of the interaction between human and ai, including the last question to answer
     logger.debug(f'Prompt for generate function: {prompt}' )
 
     # Run
@@ -244,35 +295,55 @@ def generate(state: StateWithDocsList): #This state contains the original query 
     logger.debug("End of generate node")
 
     state['messages'] = state['messages'] + [response] 
+    #print(f'state: {state}')
 
     return state
-
 
 
 ### Declaration of the graph ###
 
 
-#graph_builder = StateGraph(MessagesState) #Input of the graph is of the type MessagesState
+#graph_builder = StateGraph(MessagesState) #Input of the graph is of the type MessagesState -------------
 graph_builder=StateGraph(state_schema= StateWithDocsList)
 
-#declaration of nodes
+#declaration of nodes ------------------------------------
+graph_builder.add_node(boargame_question_detector)
 graph_builder.add_node(get_useful_document_names)
 graph_builder.add_node(retriever)
 graph_builder.add_node(generate)
 
-#set starting nodes
-graph_builder.add_edge(START, "get_useful_document_names")
+#set starting nodes-----------------------------------------------
+graph_builder.add_edge(START, "boargame_question_detector")
+
+#set conditional edges---------------------------------------------
+# Condition function (must return node names)
+def decision_after_question_detector(state: StateWithDocsList): 
+    #print(f"State inside decision: {state['should_use_retriever']}")
+    if state['should_use_retriever'] == 'True':
+        return "get_context"
+    else:
+        return "skip_context"
+    
+# Add conditional edges
+
+graph_builder.add_conditional_edges(
+    "boargame_question_detector",
+    decision_after_question_detector,
+    path_map={'get_context': "get_useful_document_names", 'skip_context': "generate"}
+)
+
+
+#set regular edges-------------------------------------------------
 graph_builder.add_edge("get_useful_document_names", "retriever")
 graph_builder.add_edge("retriever", "generate")
 graph_builder.add_edge("generate", END)
 
-
-#declaration of memory
+#declaration of memory---------------------------------------------
 memory = MemorySaver()
-#graph compilation
+#graph compilation ------------------------------------------------
 graph = graph_builder.compile(checkpointer=memory)
 
-
 print('We finished running rag script')
+
 
 

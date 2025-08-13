@@ -111,6 +111,7 @@ if __name__ == '__main__':
 #curl -X POST http://127.0.0.1:5000/predict -H "Content-Type: application/json" -d '{"question": "How do you win at Memoir?"}'
 #curl -X POST https://boardgames-assistant.onrender.com/predict -H "Content-Type: application/json" -d '{"question": "How do you win at Memoir?"}'
 #curl -X POST https://boardgames-assistant-light-rag.onrender.com/predict -H "Content-Type: application/json" -d '{"question": "How do you win at Tureluurs?"}'
+#curl -X POST http://127.0.0.1:5000/predict -H "Content-Type: application/json" -d '{"question": "How do you win at Tureluurs?"}'
 
 
 

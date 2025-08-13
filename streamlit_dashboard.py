@@ -31,9 +31,7 @@ from langchain_core.messages import HumanMessage
 # For UI
 import streamlit as st
 
-# Create id of thread (Memory of the chatbot will be reset every different day)
-from datetime import datetime
-
+# For debugging
 import logging
 logging.basicConfig(level=logging.DEBUG)
 

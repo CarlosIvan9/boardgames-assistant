@@ -4,6 +4,8 @@ The assistant is a RAG. We split the logic in 2 parts. The first part is in char
 The second part is the chatbot: it receives the question of the user, and retrieves an answer using as context the chunks from the vector store that are more similar to the question.
 The first part is just a jupyter notebook called 'upload-files-to-qdrant-vector-store.ipynb'. The second part is a flask api which uses the script 'flask_api.py' and the rag module in the 'api/utils' folder.
 
+Both branches work very well locally using flask.
+
 # Project Status
 The project currently has two branches: first_rag and light_rag
 
@@ -25,3 +27,6 @@ We use the light version of embeddings v3.0, which has a 384 dimension
 The objective of the filter was to instead of searching for chunks of all possible boardgames, to only search for chunks coming from documents related to the specific boardgame the user is asking about. For this, we added a node in the graph. This node, which will be the first one to be called, receives the question of the user and the list of document names as input. The output of it is a list of document names that are related to the boardgame the user is inquiring about. We then used this list as input of the retriever to be used as filter, using the metadata value 'game' that all chunks possess.
 
 However, the function we used to retrieve the data, which was a Langchain tool, did not allowed for extra inputs to be given (the list of relevant documents to be used in the filter). Hence, we changed this node from being a tool to being a regular node.
+
+### Other changes
+Besides that, I adapted the graph to only run the retriever and the node to detect useful documents if the question is related to a boardgame.
